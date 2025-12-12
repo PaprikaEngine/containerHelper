@@ -29,6 +29,7 @@ logs/
 .env.test.local
 .env.production.local
 
+# Node.js (for frontend)
 # Node.js (for future frontend)
 node_modules/
 npm-debug.log*
