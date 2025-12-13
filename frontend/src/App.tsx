@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StepLayout } from './components/StepLayout';
 import { OSSelection } from './components/OSSelection';
 import { LanguageSelection } from './components/LanguageSelection';
+import { DockerfilePreview } from './components/DockerfilePreview';
 import type { EnvironmentConfig, OsConfig, Language } from './types/config';
 import { TOTAL_STEPS } from './constants/options';
 
@@ -57,6 +58,12 @@ function App() {
           <LanguageSelection
             selectedLanguages={config.languages}
             onLanguagesChange={handleLanguagesChange}
+          />
+        );
+      case 3:
+        return (
+          <DockerfilePreview
+            config={config}
           />
         );
       default:

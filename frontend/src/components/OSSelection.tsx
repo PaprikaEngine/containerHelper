@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Title, Text, SimpleGrid, Paper, Stack, Group, Button } from '@mantine/core';
 import type { OsConfig } from '../types/config';
 import { OS_OPTIONS } from '../constants/options';
 
@@ -27,47 +28,48 @@ export const OSSelection: React.FC<OSSelectionProps> = ({ selectedOS, onOSSelect
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">Choose Base OS</h2>
-      <p className="text-gray-600 mb-6">Select the operating system for your development environment.</p>
+    <Stack gap="xl">
+      <Stack gap="xs">
+        <Title order={2}>Choose Base OS</Title>
+        <Text c="dimmed">Select the operating system for your development environment.</Text>
+      </Stack>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
         {OS_OPTIONS.map((os) => (
-          <div
+          <Paper
             key={os.type}
+            p="md"
+            withBorder
+            style={{ cursor: 'pointer' }}
             onClick={() => handleOSClick(os.type)}
-            className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-              selectedType === os.type
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-blue-500'
-            }`}
+            bg={selectedType === os.type ? 'blue.0' : 'white'}
+            bd={selectedType === os.type ? '1px solid var(--mantine-color-blue-5)' : '1px solid var(--mantine-color-gray-3)'}
           >
-            <h3 className="font-medium">{os.name}</h3>
-            <p className="text-sm text-gray-500">{os.versions.join(', ')}</p>
-          </div>
+            <Stack gap="xs">
+              <Text fw={500} size="lg">{os.name}</Text>
+              <Text size="sm" c="dimmed">{os.versions.join(', ')}</Text>
+            </Stack>
+          </Paper>
         ))}
-      </div>
+      </SimpleGrid>
 
       {selectedType && (
-        <div className="mt-6">
-          <h3 className="text-lg font-medium mb-3">Select Version</h3>
-          <div className="flex flex-wrap gap-2">
+        <Stack gap="md">
+          <Title order={3}>Select Version</Title>
+          <Group gap="xs">
             {OS_OPTIONS.find(os => os.type === selectedType)?.versions.map((version) => (
-              <button
+              <Button
                 key={version}
+                variant={selectedVersion === version ? 'filled' : 'outline'}
                 onClick={() => handleVersionSelect(version)}
-                className={`px-4 py-2 rounded-lg border transition-colors ${
-                  selectedVersion === version
-                    ? 'border-blue-500 bg-blue-500 text-white'
-                    : 'border-gray-300 hover:border-blue-500'
-                }`}
+                size="sm"
               >
                 {version}
-              </button>
+              </Button>
             ))}
-          </div>
-        </div>
+          </Group>
+        </Stack>
       )}
-    </div>
+    </Stack>
   );
 };
