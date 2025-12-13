@@ -28,8 +28,8 @@ async fn main() {
         .route("/api/dockerfile/generate", post(routes::dockerfile::generate_dockerfile))
         .layer(CorsLayer::permissive());
 
-    // Run it with hyper on localhost:3001
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
+    // Run it with hyper on 0.0.0.0:3001
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     tracing::info!("Container Helper backend listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
