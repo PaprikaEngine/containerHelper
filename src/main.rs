@@ -6,10 +6,10 @@ use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-mod routes;
-mod models;
-mod services;
 mod db;
+mod models;
+mod routes;
+mod services;
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +25,10 @@ async fn main() {
     // Build our application with routes
     let app = Router::new()
         .route("/health", get(routes::health::health_check))
-        .route("/api/dockerfile/generate", post(routes::dockerfile::generate_dockerfile))
+        .route(
+            "/api/dockerfile/generate",
+            post(routes::dockerfile::generate_dockerfile),
+        )
         .layer(CorsLayer::permissive());
 
     // Run it with hyper on 0.0.0.0:3001

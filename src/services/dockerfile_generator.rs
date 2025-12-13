@@ -57,7 +57,10 @@ fn get_language_install_commands(language: &Language, os_type: &str) -> Vec<Stri
             if is_alpine {
                 vec![
                     format!("RUN {} && \\", update_cmd),
-                    format!("    {} {} python3 py3-pip && \\", package_manager, install_flag),
+                    format!(
+                        "    {} {} python3 py3-pip && \\",
+                        package_manager, install_flag
+                    ),
                     "    rm -rf /var/cache/apk/*".to_string(),
                 ]
             } else {
