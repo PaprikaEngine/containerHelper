@@ -67,8 +67,14 @@ fn get_language_install_commands(language: &Language, os_type: &str) -> Vec<Stri
                 vec![
                     format!("RUN {} && \\", update_cmd),
                     format!(
-                        "    {} {} python{} python3-pip && \\",
-                        package_manager, install_flag, language.version
+                        "    {} {} software-properties-common && \\",
+                        package_manager, install_flag
+                    ),
+                    "    add-apt-repository ppa:deadsnakes/ppa -y && \\".to_string(),
+                    format!("    {} update && \\", package_manager),
+                    format!(
+                        "    {} {} python{} python{}-pip && \\",
+                        package_manager, install_flag, language.version, language.version
                     ),
                     "    rm -rf /var/lib/apt/lists/*".to_string(),
                 ]
@@ -86,10 +92,12 @@ fn get_language_install_commands(language: &Language, os_type: &str) -> Vec<Stri
                     format!("RUN {} && \\", update_cmd),
                     format!("    {} {} curl && \\", package_manager, install_flag),
                     format!(
-                        "    curl -fsSL https://deb.nodesource.com/setup_{}.x | bash - && \\",
+                        "    curl -fsSL https://deb.nodesource.com/setup_{}.x -o nodesource_setup.sh && \\",
                         language.version
                     ),
+                    "    bash nodesource_setup.sh && \\".to_string(),
                     format!("    {} {} nodejs && \\", package_manager, install_flag),
+                    "    rm nodesource_setup.sh && \\".to_string(),
                     "    rm -rf /var/lib/apt/lists/*".to_string(),
                 ]
             }
@@ -112,10 +120,9 @@ fn get_language_install_commands(language: &Language, os_type: &str) -> Vec<Stri
                     "    {} {} curl build-essential && \\",
                     package_manager, install_flag
                 ),
-                format!(
-                    "    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y {} && \\",
-                    nightly_flag
-                ),
+                "    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh && \\".to_string(),
+                format!("    sh rustup-init.sh -y {} && \\", nightly_flag),
+                "    rm rustup-init.sh && \\".to_string(),
                 format!("    rm -rf {}", cleanup),
             ];
 
@@ -147,7 +154,8 @@ mod tests {
         let dockerfile = generate_dockerfile(&config);
         assert!(dockerfile.contains("FROM ubuntu:22.04"));
         assert!(dockerfile.contains("python3.11"));
-        assert!(dockerfile.contains("python3-pip"));
+        assert!(dockerfile.contains("python3.11-pip"));
+        assert!(dockerfile.contains("deadsnakes"));
     }
 
     #[test]
