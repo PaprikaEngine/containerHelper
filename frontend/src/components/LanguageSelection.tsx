@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Title, Text, Paper, Stack, Checkbox, Group, Button } from '@mantine/core';
 import type { Language } from '../types/config';
 import { LANGUAGE_OPTIONS } from '../constants/options';
 
@@ -63,56 +64,49 @@ export const LanguageSelection: React.FC<LanguageSelectionProps> = ({
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">Select Languages</h2>
-      <p className="text-gray-600 mb-6">Choose the programming languages and runtimes you need.</p>
+    <Stack gap="xl">
+      <Stack gap="xs">
+        <Title order={2}>Select Languages</Title>
+        <Text c="dimmed">Choose the programming languages and runtimes you need.</Text>
+      </Stack>
 
-      <div className="space-y-6">
+      <Stack gap="md">
         {LANGUAGE_OPTIONS.map((langOption) => {
           const isSelected = isLanguageSelected(langOption.name);
           const currentVersion = languageVersions[langOption.name] || langOption.versions[0];
 
           return (
-            <div key={langOption.name} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <input
-                  type="checkbox"
-                  id={langOption.name}
+            <Paper key={langOption.name} withBorder p="md">
+              <Stack gap="md">
+                <Checkbox
+                  label={langOption.displayName}
                   checked={isSelected}
                   onChange={() => handleLanguageToggle(langOption.name)}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  size="md"
                 />
-                <label htmlFor={langOption.name} className="text-sm font-medium">
-                  {langOption.displayName}
-                </label>
-              </div>
 
-              {isSelected && (
-                <div className="ml-7">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Version:
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {langOption.versions.map((version) => (
-                      <button
-                        key={version}
-                        onClick={() => handleVersionChange(langOption.name, version)}
-                        className={`px-3 py-1 text-sm rounded-md border transition-colors ${
-                          currentVersion === version
-                            ? 'border-blue-500 bg-blue-500 text-white'
-                            : 'border-gray-300 hover:border-blue-500'
-                        }`}
-                      >
-                        {version}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                {isSelected && (
+                  <Stack gap="xs" ml="xl">
+                    <Text size="sm" fw={500}>Version:</Text>
+                    <Group gap="xs">
+                      {langOption.versions.map((version) => (
+                        <Button
+                          key={version}
+                          variant={currentVersion === version ? 'filled' : 'outline'}
+                          onClick={() => handleVersionChange(langOption.name, version)}
+                          size="xs"
+                        >
+                          {version}
+                        </Button>
+                      ))}
+                    </Group>
+                  </Stack>
+                )}
+              </Stack>
+            </Paper>
           );
         })}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 };
