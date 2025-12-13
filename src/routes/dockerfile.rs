@@ -52,14 +52,12 @@ pub async fn generate_dockerfile(
 #[derive(Debug)]
 pub enum AppError {
     BadRequest(String),
-    InternalError(String),
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
-            AppError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
 
         let body = Json(ErrorResponse { error: message });
