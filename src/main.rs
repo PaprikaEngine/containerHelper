@@ -1,5 +1,5 @@
 use axum::{
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use std::net::SocketAddr;
@@ -25,6 +25,7 @@ async fn main() {
     // Build our application with routes
     let app = Router::new()
         .route("/health", get(routes::health::health_check))
+        .route("/api/dockerfile/generate", post(routes::dockerfile::generate_dockerfile))
         .layer(CorsLayer::permissive());
 
     // Run it with hyper on localhost:3001
