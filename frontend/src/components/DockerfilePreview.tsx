@@ -99,8 +99,11 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
         ? { [`${config.ssh.port}`]: '22' }
         : undefined;
 
+      // Add timestamp to make container name unique
+      const uniqueContainerName = `${containerName}-${Date.now()}`;
+
       const result = await apiClient.runContainer(builtImageTag, {
-        name: containerName,
+        name: uniqueContainerName,
         ports,
       });
       setContainerId(result.container_id);
@@ -211,24 +214,40 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
               <Stack gap="sm">
                 <Group gap="sm">
                   <Loader size="sm" />
-                  <Text fw={500} size="sm">Building image...</Text>
+                  <Text fw={500} size="sm">Building Docker image...</Text>
                 </Group>
+                <Text size="sm" c="dimmed">
+                  This may take a few minutes depending on the selected languages and packages.
+                </Text>
               </Stack>
             </Paper>
           )}
 
           {buildLogs.length > 0 && (
-            <Stack gap="xs">
-              <Text fw={500}>Build Logs:</Text>
-              <Code block style={{
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'monospace',
-                maxHeight: '300px',
-                overflowY: 'auto'
-              }}>
-                {buildLogs.join('')}
-              </Code>
-            </Stack>
+            <Paper withBorder p="md">
+              <Stack gap="md">
+                <Group gap="sm">
+                  <Text fw={600} size="md">📋 Build Logs</Text>
+                  {building && <Loader size="xs" />}
+                </Group>
+                <Code
+                  block
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    backgroundColor: '#1e1e1e',
+                    color: '#d4d4d4',
+                    padding: '12px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  {buildLogs.join('')}
+                </Code>
+              </Stack>
+            </Paper>
           )}
 
           {builtImageTag && !containerId && (
