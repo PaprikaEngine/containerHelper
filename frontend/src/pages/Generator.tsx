@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StepLayout } from '../components/StepLayout';
 import { OSSelection } from '../components/OSSelection';
 import { LanguageSelection } from '../components/LanguageSelection';
@@ -6,12 +6,55 @@ import { DockerfilePreview } from '../components/DockerfilePreview';
 import type { EnvironmentConfig, OsConfig, Language } from '../types/config';
 import { TOTAL_STEPS } from '../constants/options';
 
+const STORAGE_KEY = 'containerHelper.generatorState';
+
+interface GeneratorState {
+  currentStep: number;
+  config: EnvironmentConfig;
+}
+
+// LocalStorageから状態を読み込む関数
+const loadStateFromStorage = (): GeneratorState | null => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error('Failed to load state from localStorage:', error);
+  }
+  return null;
+};
+
+// LocalStorageに状態を保存する関数
+const saveStateToStorage = (state: GeneratorState): void => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error('Failed to save state to localStorage:', error);
+  }
+};
+
 export function Generator() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [config, setConfig] = useState<EnvironmentConfig>({
-    os: { type: '', version: '' },
-    languages: [],
-  });
+  // LocalStorageから初期状態を読み込む
+  const initialState = loadStateFromStorage();
+
+  const [currentStep, setCurrentStep] = useState(initialState?.currentStep ?? 1);
+  const [config, setConfig] = useState<EnvironmentConfig>(
+    initialState?.config ?? {
+      os: { type: '', version: '' },
+      languages: [],
+    }
+  );
+
+  // 状態が変更されたらLocalStorageに保存
+  useEffect(() => {
+    const state: GeneratorState = {
+      currentStep,
+      config,
+    };
+    saveStateToStorage(state);
+  }, [currentStep, config]);
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
