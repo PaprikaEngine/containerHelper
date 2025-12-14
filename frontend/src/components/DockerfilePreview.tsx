@@ -95,8 +95,9 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
 
     try {
       // Add SSH port mapping if SSH is enabled
+      // Format: { "container_port": "host_port" }
       const ports = config.ssh?.enabled && config.ssh.port
-        ? { [`${config.ssh.port}`]: '22' }
+        ? { '22': `${config.ssh.port}` }
         : undefined;
 
       // Add timestamp to make container name unique
