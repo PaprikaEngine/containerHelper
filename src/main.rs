@@ -3,6 +3,7 @@ use axum::{
     Router,
 };
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -10,6 +11,8 @@ mod db;
 mod models;
 mod routes;
 mod services;
+
+use services::docker_service::DockerService;
 
 #[tokio::main]
 async fn main() {
@@ -22,6 +25,10 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    // Initialize Docker service
+    let docker_service =
+        Arc::new(DockerService::new().expect("Failed to connect to Docker daemon"));
+
     // Build our application with routes
     let app = Router::new()
         .route("/health", get(routes::health::health_check))
@@ -29,6 +36,7 @@ async fn main() {
             "/api/dockerfile/generate",
             post(routes::dockerfile::generate_dockerfile),
         )
+        .merge(routes::container::container_routes().with_state(docker_service.clone()))
         .layer(CorsLayer::permissive());
 
     // Run it with hyper on 0.0.0.0:3001
