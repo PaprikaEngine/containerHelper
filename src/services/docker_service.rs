@@ -185,10 +185,12 @@ impl DockerService {
     }
 
     pub async fn build_image(&self, dockerfile: &str, tag: &str) -> Result<Vec<String>> {
-        let mut build_options = BuildImageOptions::default();
-        build_options.t = tag.to_string();
-        build_options.rm = true; // Remove intermediate containers
-        build_options.pull = true; // Always pull base image
+        let build_options = BuildImageOptions {
+            t: tag.to_string(),
+            rm: true,  // Remove intermediate containers
+            pull: true, // Always pull base image
+            ..Default::default()
+        };
 
         let dockerfile_tar = self.create_dockerfile_tar(dockerfile)?;
 
