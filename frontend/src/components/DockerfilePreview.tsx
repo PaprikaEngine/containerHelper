@@ -94,8 +94,14 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
     setContainerId(null);
 
     try {
+      // Add SSH port mapping if SSH is enabled
+      const ports = config.ssh?.enabled && config.ssh.port
+        ? { [`${config.ssh.port}`]: '22' }
+        : undefined;
+
       const result = await apiClient.runContainer(builtImageTag, {
         name: containerName,
+        ports,
       });
       setContainerId(result.container_id);
     } catch (err) {
@@ -127,6 +133,11 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
             <Text size="sm" c="dimmed">
               Languages: {config.languages.map(lang => `${lang.name} ${lang.version}`).join(', ')}
             </Text>
+            {config.ssh?.enabled && (
+              <Text size="sm" c="dimmed">
+                SSH Server: Enabled (Port {config.ssh.port})
+              </Text>
+            )}
           </div>
         </Stack>
       </Paper>

@@ -15,7 +15,7 @@ import {
   Alert,
   Code,
 } from '@mantine/core';
-import { IconRefresh, IconPlayerPlay, IconPlayerPause, IconTrash, IconSearch } from '@tabler/icons-react';
+import { IconRefresh, IconPlayerPlay, IconPlayerPause, IconTrash, IconSearch, IconTerminal, IconKey } from '@tabler/icons-react';
 import { containerApi, type ContainerInfo } from '../api/containers';
 import { notifications } from '@mantine/notifications';
 
@@ -123,6 +123,52 @@ export function Containers() {
   const openDeleteModal = (container: ContainerInfo) => {
     setSelectedContainer(container);
     setDeleteModalOpen(true);
+  };
+
+  const handleCopyCommand = async (containerId: string, containerName: string) => {
+    // Use /bin/sh for Alpine-based images, /bin/bash for others
+    const shell = containerName.toLowerCase().includes('alpine') ? '/bin/sh' : '/bin/bash';
+    const command = `docker exec -it ${truncateId(containerId)} ${shell}`;
+
+    try {
+      await navigator.clipboard.writeText(command);
+      notifications.show({
+        title: 'Command Copied',
+        message: `Exec command copied to clipboard`,
+        color: 'blue',
+      });
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to copy command to clipboard',
+        color: 'red',
+      });
+      console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  const handleCopySSHCommand = async (ports: ContainerInfo['ports']) => {
+    // Find SSH port mapping (port 22)
+    const sshPort = ports.find(p => p.private_port === 22);
+    if (!sshPort || !sshPort.public_port) return;
+
+    const command = `ssh -p ${sshPort.public_port} root@localhost`;
+
+    try {
+      await navigator.clipboard.writeText(command);
+      notifications.show({
+        title: 'SSH Command Copied',
+        message: `SSH connection command copied to clipboard`,
+        color: 'blue',
+      });
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to copy SSH command to clipboard',
+        color: 'red',
+      });
+      console.error('Failed to copy to clipboard:', error);
+    }
   };
 
   const getStateBadgeColor = (state: string) => {
@@ -248,14 +294,34 @@ export function Containers() {
                     <Table.Td>
                       <Group gap="xs">
                         {container.state.toLowerCase() === 'running' ? (
-                          <ActionIcon
-                            color="yellow"
-                            variant="light"
-                            onClick={() => handleStop(container.id, container.name)}
-                            title="Stop container"
-                          >
-                            <IconPlayerPause size={16} />
-                          </ActionIcon>
+                          <>
+                            <ActionIcon
+                              color="blue"
+                              variant="light"
+                              onClick={() => handleCopyCommand(container.id, container.name)}
+                              title="Copy docker exec command"
+                            >
+                              <IconTerminal size={16} />
+                            </ActionIcon>
+                            {container.ports.some(p => p.private_port === 22) && (
+                              <ActionIcon
+                                color="cyan"
+                                variant="light"
+                                onClick={() => handleCopySSHCommand(container.ports)}
+                                title="Copy SSH connection command"
+                              >
+                                <IconKey size={16} />
+                              </ActionIcon>
+                            )}
+                            <ActionIcon
+                              color="yellow"
+                              variant="light"
+                              onClick={() => handleStop(container.id, container.name)}
+                              title="Stop container"
+                            >
+                              <IconPlayerPause size={16} />
+                            </ActionIcon>
+                          </>
                         ) : (
                           <ActionIcon
                             color="green"

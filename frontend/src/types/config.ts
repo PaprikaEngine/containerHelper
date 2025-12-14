@@ -8,8 +8,15 @@ export interface Language {
   version: string;
 }
 
+export interface SshConfig {
+  enabled: boolean;
+  port: number;
+  password: string;
+}
+
 export interface EnvironmentConfig {
   name?: string;
   os: OsConfig;
   languages: Language[];
+  ssh?: SshConfig;
 }

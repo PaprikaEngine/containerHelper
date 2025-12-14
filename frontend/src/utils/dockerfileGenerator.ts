@@ -27,12 +27,26 @@ export const generateDockerfile = (config: EnvironmentConfig): string => {
     }
   });
 
+  // Add SSH server if enabled
+  if (config.ssh?.enabled) {
+    const sshCommands = getSSHInstallCommands(config.os.type, config.ssh.password);
+    lines.push('# Install and configure SSH server');
+    lines.push(...sshCommands);
+    lines.push('');
+    lines.push(`EXPOSE ${config.ssh.port}`);
+    lines.push('');
+  }
+
   // Add common helpful commands
   lines.push('# Copy application files');
   lines.push('# COPY . .');
   lines.push('');
   lines.push('# Set default command');
-  lines.push('CMD ["/bin/bash"]');
+  if (config.ssh?.enabled) {
+    lines.push('CMD ["/usr/sbin/sshd", "-D"]');
+  } else {
+    lines.push('CMD ["/bin/bash"]');
+  }
 
   return lines.join('\n');
 };
@@ -48,6 +62,34 @@ const getOSImage = (osType: string, version: string): string => {
     default:
       return 'ubuntu:22.04';
   }
+};
+
+const getSSHInstallCommands = (osType: string, password: string): string[] => {
+  const isAlpine = osType === 'alpine';
+
+  if (isAlpine) {
+    return [
+      'RUN apk update && \\',
+      '    apk add openssh-server && \\',
+      '    ssh-keygen -A && \\',
+      `    echo "root:${password}" | chpasswd && \\`,
+      '    sed -i "s/#PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
+      '    sed -i "s/#PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config && \\',
+      '    mkdir -p /run/sshd && \\',
+      '    rm -rf /var/cache/apk/*',
+    ];
+  }
+
+  // Debian/Ubuntu
+  return [
+    'RUN apt-get update && \\',
+    '    apt-get install -y openssh-server && \\',
+    '    mkdir -p /var/run/sshd && \\',
+    `    echo "root:${password}" | chpasswd && \\`,
+    '    sed -i "s/#PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
+    '    sed -i "s/#PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config && \\',
+    '    rm -rf /var/lib/apt/lists/*',
+  ];
 };
 
 const getLanguageInstallCommands = (

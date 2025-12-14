@@ -12,9 +12,17 @@ pub struct Language {
     pub version: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SshConfig {
+    pub enabled: bool,
+    pub port: u16,
+    pub password: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EnvironmentConfig {
     pub name: Option<String>,
     pub os: OsConfig,
     pub languages: Vec<Language>,
+    pub ssh: Option<SshConfig>,
 }
