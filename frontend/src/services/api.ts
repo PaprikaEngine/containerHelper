@@ -10,6 +10,21 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface BuildResponse {
+  logs: string[];
+  tag: string;
+}
+
+export interface RunOptions {
+  name?: string;
+  env?: string[];
+  ports?: Record<string, string>;
+}
+
+export interface RunResponse {
+  container_id: string;
+}
+
 export class ApiError extends Error {
   statusCode: number;
 
@@ -49,5 +64,51 @@ export const apiClient = {
 
     const data: DockerfileResponse = await response.json();
     return data.dockerfile;
+  },
+
+  async buildImage(dockerfile: string, tag: string): Promise<BuildResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/containers/build`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        dockerfile,
+        tag,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: ErrorResponse = await response.json().catch(() => ({
+        error: 'Failed to build image',
+      }));
+      throw new ApiError(response.status, errorData.error);
+    }
+
+    return await response.json();
+  },
+
+  async runContainer(image: string, options?: RunOptions): Promise<RunResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/containers/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image,
+        name: options?.name,
+        env: options?.env,
+        ports: options?.ports,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: ErrorResponse = await response.json().catch(() => ({
+        error: 'Failed to run container',
+      }));
+      throw new ApiError(response.status, errorData.error);
+    }
+
+    return await response.json();
   },
 };

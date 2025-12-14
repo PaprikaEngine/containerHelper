@@ -27,3 +27,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # DateTime
 chrono = { version = "0.4", features = ["serde"] }
+
+# Async utilities
+futures-util = "0.3"
+
+# Archive
+tar = "0.4"

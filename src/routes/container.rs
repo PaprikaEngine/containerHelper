@@ -7,7 +7,34 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
+
+#[derive(Debug, Deserialize)]
+pub struct BuildRequest {
+    pub dockerfile: String,
+    pub tag: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BuildResponse {
+    pub logs: Vec<String>,
+    pub tag: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RunRequest {
+    pub image: String,
+    pub name: Option<String>,
+    pub env: Option<Vec<String>>,
+    pub ports: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RunResponse {
+    pub container_id: String,
+}
 
 pub fn container_routes() -> Router<Arc<DockerService>> {
     Router::new()
@@ -18,6 +45,8 @@ pub fn container_routes() -> Router<Arc<DockerService>> {
         )
         .route("/api/containers/:id/start", post(start_container))
         .route("/api/containers/:id/stop", post(stop_container))
+        .route("/api/containers/build", post(build_image))
+        .route("/api/containers/run", post(run_container))
 }
 
 async fn list_containers(
@@ -95,6 +124,56 @@ async fn remove_container(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to remove container",
             )
+        }
+    }
+}
+
+async fn build_image(
+    State(docker_service): State<Arc<DockerService>>,
+    Json(request): Json<BuildRequest>,
+) -> Result<Json<BuildResponse>, (StatusCode, String)> {
+    tracing::info!("Building image with tag: {}", request.tag);
+
+    match docker_service
+        .build_image(&request.dockerfile, &request.tag)
+        .await
+    {
+        Ok(logs) => Ok(Json(BuildResponse {
+            logs,
+            tag: request.tag,
+        })),
+        Err(e) => {
+            tracing::error!("Failed to build image: {}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to build image: {}", e),
+            ))
+        }
+    }
+}
+
+async fn run_container(
+    State(docker_service): State<Arc<DockerService>>,
+    Json(request): Json<RunRequest>,
+) -> Result<Json<RunResponse>, (StatusCode, String)> {
+    tracing::info!("Running container from image: {}", request.image);
+
+    match docker_service
+        .run_container(
+            &request.image,
+            request.name.as_deref(),
+            request.env,
+            request.ports,
+        )
+        .await
+    {
+        Ok(container_id) => Ok(Json(RunResponse { container_id })),
+        Err(e) => {
+            tracing::error!("Failed to run container: {}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to run container: {}", e),
+            ))
         }
     }
 }

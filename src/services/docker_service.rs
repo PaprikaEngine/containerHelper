@@ -1,9 +1,13 @@
 use crate::models::container::{ContainerDetail, ContainerInfo, MountInfo, PortMapping};
 use anyhow::Result;
 use bollard::container::{
-    ListContainersOptions, RemoveContainerOptions, StartContainerOptions, StopContainerOptions,
+    Config as ContainerConfig, CreateContainerOptions, ListContainersOptions,
+    RemoveContainerOptions, StartContainerOptions, StopContainerOptions,
 };
+use bollard::image::BuildImageOptions;
 use bollard::Docker;
+use futures_util::stream::StreamExt;
+use std::collections::HashMap;
 
 pub struct DockerService {
     docker: Docker,
@@ -178,6 +182,108 @@ impl DockerService {
         });
         self.docker.remove_container(id, options).await?;
         Ok(())
+    }
+
+    pub async fn build_image(&self, dockerfile: &str, tag: &str) -> Result<Vec<String>> {
+        let build_options = BuildImageOptions {
+            t: tag.to_string(),
+            rm: true,   // Remove intermediate containers
+            pull: true, // Always pull base image
+            ..Default::default()
+        };
+
+        let dockerfile_tar = self.create_dockerfile_tar(dockerfile)?;
+
+        let mut stream = self
+            .docker
+            .build_image(build_options, None, Some(dockerfile_tar.into()));
+
+        let mut logs = Vec::new();
+        while let Some(build_info) = stream.next().await {
+            match build_info {
+                Ok(info) => {
+                    if let Some(stream) = info.stream {
+                        tracing::info!("Build: {}", stream.trim());
+                        logs.push(stream);
+                    }
+                    if let Some(error) = info.error {
+                        tracing::error!("Build error: {}", error);
+                        return Err(anyhow::anyhow!("Build failed: {}", error));
+                    }
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
+
+        Ok(logs)
+    }
+
+    pub async fn run_container(
+        &self,
+        image: &str,
+        name: Option<&str>,
+        env: Option<Vec<String>>,
+        ports: Option<HashMap<String, String>>,
+    ) -> Result<String> {
+        let mut port_bindings = HashMap::new();
+        if let Some(ports_map) = ports {
+            for (container_port, host_port) in ports_map {
+                // Docker requires port keys to include protocol (e.g., "8080/tcp")
+                let port_key = if container_port.contains('/') {
+                    container_port
+                } else {
+                    format!("{}/tcp", container_port)
+                };
+                port_bindings.insert(
+                    port_key,
+                    Some(vec![bollard::service::PortBinding {
+                        host_ip: Some("0.0.0.0".to_string()),
+                        host_port: Some(host_port),
+                    }]),
+                );
+            }
+        }
+
+        let config = ContainerConfig {
+            image: Some(image.to_string()),
+            env,
+            host_config: Some(bollard::service::HostConfig {
+                port_bindings: Some(port_bindings),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let options = name.map(|n| CreateContainerOptions {
+            name: n.to_string(),
+            ..Default::default()
+        });
+
+        let container = self.docker.create_container(options, config).await?;
+
+        self.docker
+            .start_container(&container.id, None::<StartContainerOptions<String>>)
+            .await?;
+
+        Ok(container.id)
+    }
+
+    fn create_dockerfile_tar(&self, dockerfile_content: &str) -> Result<Vec<u8>> {
+        use tar::Builder;
+
+        let mut archive = Builder::new(Vec::new());
+        let dockerfile_bytes = dockerfile_content.as_bytes();
+
+        let mut header = tar::Header::new_gnu();
+        header.set_path("Dockerfile")?;
+        header.set_size(dockerfile_bytes.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+
+        archive.append(&header, dockerfile_bytes)?;
+        archive.finish()?;
+
+        Ok(archive.into_inner()?)
     }
 }
 
