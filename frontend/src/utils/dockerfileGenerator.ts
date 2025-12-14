@@ -70,24 +70,22 @@ const getSSHInstallCommands = (osType: string, password: string): string[] => {
   if (isAlpine) {
     return [
       'RUN apk update && \\',
-      '    apk add openssh-server && \\',
+      '    apk add --no-cache openssh && \\',
       '    ssh-keygen -A && \\',
       `    echo "root:${password}" | chpasswd && \\`,
       '    sed -i "s/#PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
-      '    sed -i "s/#PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config && \\',
-      '    mkdir -p /run/sshd && \\',
-      '    rm -rf /var/cache/apk/*',
+      '    sed -i "s/#PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config',
     ];
   }
 
   // Debian/Ubuntu
   return [
     'RUN apt-get update && \\',
-    '    apt-get install -y openssh-server && \\',
+    '    DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server && \\',
     '    mkdir -p /var/run/sshd && \\',
     `    echo "root:${password}" | chpasswd && \\`,
-    '    sed -i "s/#PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
-    '    sed -i "s/#PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config && \\',
+    '    sed -i "s/#\\?PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
+    '    sed -i "s/#\\?PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config && \\',
     '    rm -rf /var/lib/apt/lists/*',
   ];
 };
@@ -134,11 +132,20 @@ const getLanguageInstallCommands = (
       ];
 
     case 'rust':
+      if (isAlpine) {
+        return [
+          `RUN ${updateCmd} && \\`,
+          `    ${packageManager} ${installFlag} curl gcc musl-dev && \\`,
+          `    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y ${version === 'nightly' ? '--default-toolchain nightly' : ''} && \\`,
+          `    rm -rf /var/cache/apk/*`,
+          'ENV PATH="/root/.cargo/bin:${PATH}"',
+        ];
+      }
       return [
         `RUN ${updateCmd} && \\`,
         `    ${packageManager} ${installFlag} curl build-essential && \\`,
         `    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y ${version === 'nightly' ? '--default-toolchain nightly' : ''} && \\`,
-        `    rm -rf ${isAlpine ? '/var/cache/apk/*' : '/var/lib/apt/lists/*'}`,
+        `    rm -rf /var/lib/apt/lists/*`,
         'ENV PATH="/root/.cargo/bin:${PATH}"',
       ];
 
