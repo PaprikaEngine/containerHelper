@@ -52,11 +52,12 @@ export function SshConfiguration({ config, onConfigChange }: SshConfigurationPro
 
           <PasswordInput
             label="Root Password"
-            description="Password for root user SSH access"
-            placeholder="Enter a secure password"
+            description="Password for root user SSH access (minimum 6 characters)"
+            placeholder="Enter a secure password (min 6 characters)"
             value={config.password}
             onChange={handlePasswordChange}
             leftSection={<IconKey size={16} />}
+            error={config.password.length > 0 && config.password.length < 6 ? 'Password must be at least 6 characters' : undefined}
             required
           />
 
