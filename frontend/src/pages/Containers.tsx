@@ -15,7 +15,7 @@ import {
   Alert,
   Code,
 } from '@mantine/core';
-import { IconRefresh, IconPlayerPlay, IconPlayerPause, IconTrash, IconSearch } from '@tabler/icons-react';
+import { IconRefresh, IconPlayerPlay, IconPlayerPause, IconTrash, IconSearch, IconTerminal } from '@tabler/icons-react';
 import { containerApi, type ContainerInfo } from '../api/containers';
 import { notifications } from '@mantine/notifications';
 
@@ -123,6 +123,28 @@ export function Containers() {
   const openDeleteModal = (container: ContainerInfo) => {
     setSelectedContainer(container);
     setDeleteModalOpen(true);
+  };
+
+  const handleCopyCommand = async (containerId: string, containerName: string) => {
+    // Use /bin/sh for Alpine-based images, /bin/bash for others
+    const shell = containerName.toLowerCase().includes('alpine') ? '/bin/sh' : '/bin/bash';
+    const command = `docker exec -it ${truncateId(containerId)} ${shell}`;
+
+    try {
+      await navigator.clipboard.writeText(command);
+      notifications.show({
+        title: 'Command Copied',
+        message: `Exec command copied to clipboard`,
+        color: 'blue',
+      });
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to copy command to clipboard',
+        color: 'red',
+      });
+      console.error('Failed to copy to clipboard:', error);
+    }
   };
 
   const getStateBadgeColor = (state: string) => {
@@ -248,14 +270,24 @@ export function Containers() {
                     <Table.Td>
                       <Group gap="xs">
                         {container.state.toLowerCase() === 'running' ? (
-                          <ActionIcon
-                            color="yellow"
-                            variant="light"
-                            onClick={() => handleStop(container.id, container.name)}
-                            title="Stop container"
-                          >
-                            <IconPlayerPause size={16} />
-                          </ActionIcon>
+                          <>
+                            <ActionIcon
+                              color="blue"
+                              variant="light"
+                              onClick={() => handleCopyCommand(container.id, container.name)}
+                              title="Copy exec command"
+                            >
+                              <IconTerminal size={16} />
+                            </ActionIcon>
+                            <ActionIcon
+                              color="yellow"
+                              variant="light"
+                              onClick={() => handleStop(container.id, container.name)}
+                              title="Stop container"
+                            >
+                              <IconPlayerPause size={16} />
+                            </ActionIcon>
+                          </>
                         ) : (
                           <ActionIcon
                             color="green"
