@@ -148,11 +148,15 @@ export function Containers() {
   };
 
   const handleCopySSHCommand = async (ports: ContainerInfo['ports']) => {
-    // Find SSH port mapping (port 22)
-    const sshPort = ports.find(p => p.private_port === 22);
-    if (!sshPort || !sshPort.public_port) return;
+    // Find SSH port mapping (port 22 in either private or public port)
+    const sshPort = ports.find(p => p.private_port === 22 || p.public_port === 22);
+    if (!sshPort) return;
 
-    const command = `ssh -p ${sshPort.public_port} root@localhost`;
+    // Determine which port is the host port (the one that's not 22)
+    const hostPort = sshPort.private_port === 22 ? sshPort.public_port : sshPort.private_port;
+    if (!hostPort) return;
+
+    const command = `ssh -p ${hostPort} root@localhost`;
 
     try {
       await navigator.clipboard.writeText(command);
@@ -303,7 +307,7 @@ export function Containers() {
                             >
                               <IconTerminal size={16} />
                             </ActionIcon>
-                            {container.ports.some(p => p.private_port === 22) && (
+                            {container.ports.some(p => p.private_port === 22 || p.public_port === 22) && (
                               <ActionIcon
                                 color="cyan"
                                 variant="light"
