@@ -192,11 +192,9 @@ impl DockerService {
 
         let dockerfile_tar = self.create_dockerfile_tar(dockerfile)?;
 
-        let mut stream = self.docker.build_image(
-            build_options,
-            None,
-            Some(dockerfile_tar.into()),
-        );
+        let mut stream = self
+            .docker
+            .build_image(build_options, None, Some(dockerfile_tar.into()));
 
         let mut logs = Vec::new();
         while let Some(build_info) = stream.next().await {
@@ -228,8 +226,14 @@ impl DockerService {
         let mut port_bindings = HashMap::new();
         if let Some(ports_map) = ports {
             for (container_port, host_port) in ports_map {
+                // Docker requires port keys to include protocol (e.g., "8080/tcp")
+                let port_key = if container_port.contains('/') {
+                    container_port
+                } else {
+                    format!("{}/tcp", container_port)
+                };
                 port_bindings.insert(
-                    container_port,
+                    port_key,
                     Some(vec![bollard::service::PortBinding {
                         host_ip: Some("0.0.0.0".to_string()),
                         host_port: Some(host_port),

@@ -67,7 +67,7 @@ export const apiClient = {
   },
 
   async buildImage(dockerfile: string, tag: string): Promise<BuildResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/container/build`, {
+    const response = await fetch(`${API_BASE_URL}/api/containers/build`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export const apiClient = {
   },
 
   async runContainer(image: string, options?: RunOptions): Promise<RunResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/container/run`, {
+    const response = await fetch(`${API_BASE_URL}/api/containers/run`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

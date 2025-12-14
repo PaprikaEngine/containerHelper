@@ -45,8 +45,8 @@ pub fn container_routes() -> Router<Arc<DockerService>> {
         )
         .route("/api/containers/:id/start", post(start_container))
         .route("/api/containers/:id/stop", post(stop_container))
-        .route("/api/container/build", post(build_image))
-        .route("/api/container/run", post(run_container))
+        .route("/api/containers/build", post(build_image))
+        .route("/api/containers/run", post(run_container))
 }
 
 async fn list_containers(

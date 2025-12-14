@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Title, Text, Stack, Paper, Code, Loader, Alert, Button, Group } from '@mantine/core';
+import { Title, Text, Stack, Paper, Code, Loader, Alert, Button, Group, TextInput } from '@mantine/core';
 import type { EnvironmentConfig } from '../types/config';
 import { apiClient, ApiError } from '../services/api';
 
 interface DockerfilePreviewProps {
   config: EnvironmentConfig;
 }
+
+// Sanitize name for Docker (only lowercase alphanumeric, underscore, period, hyphen)
+const sanitizeDockerName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9_.-]+/g, '-') // Replace invalid chars with hyphen
+    .replace(/^[^a-z0-9]+/, '') // Remove leading non-alphanumeric
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+};
 
 export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) => {
   const [dockerfile, setDockerfile] = useState<string>('');
@@ -16,11 +26,21 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
   const [builtImageTag, setBuiltImageTag] = useState<string | null>(null);
   const [running, setRunning] = useState<boolean>(false);
   const [containerId, setContainerId] = useState<string | null>(null);
+  const [containerName, setContainerName] = useState<string>(
+    `${sanitizeDockerName(config.name || 'custom-env')}-container`
+  );
 
   useEffect(() => {
     const fetchDockerfile = async () => {
       setLoading(true);
       setError(null);
+      // Reset build/run state when config changes
+      setBuilding(false);
+      setBuildLogs([]);
+      setBuiltImageTag(null);
+      setRunning(false);
+      setContainerId(null);
+      setContainerName(`${sanitizeDockerName(config.name || 'custom-env')}-container`);
 
       try {
         const result = await apiClient.generateDockerfile(config);
@@ -50,7 +70,7 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
     setContainerId(null);
 
     try {
-      const tag = `${(config.name || 'custom-env').toLowerCase().replace(/\s+/g, '-')}:latest`;
+      const tag = `${sanitizeDockerName(config.name || 'custom-env')}:latest`;
       const result = await apiClient.buildImage(dockerfile, tag);
       setBuildLogs(result.logs);
       setBuiltImageTag(result.tag);
@@ -75,7 +95,7 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
 
     try {
       const result = await apiClient.runContainer(builtImageTag, {
-        name: `${(config.name || 'custom-env').toLowerCase().replace(/\s+/g, '-')}-container`,
+        name: containerName,
       });
       setContainerId(result.container_id);
     } catch (err) {
@@ -135,25 +155,45 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
             </Code>
           </Stack>
 
-          <Group>
-            <Button
-              onClick={handleBuild}
-              loading={building}
-              disabled={building || !!builtImageTag}
-            >
-              {builtImageTag ? 'Image Built' : 'Build Image'}
-            </Button>
-            {builtImageTag && (
+          <Stack gap="md">
+            <Group>
               <Button
-                onClick={handleRun}
-                loading={running}
-                disabled={running || !!containerId}
-                color="green"
+                onClick={handleBuild}
+                loading={building}
+                disabled={building || !!builtImageTag}
               >
-                {containerId ? 'Container Running' : 'Run Container'}
+                {builtImageTag ? 'Image Built' : 'Build Image'}
+              </Button>
+            </Group>
+
+            {builtImageTag && !containerId && (
+              <Stack gap="sm">
+                <TextInput
+                  label="Container Name"
+                  placeholder="my-container"
+                  value={containerName}
+                  onChange={(event) => setContainerName(event.currentTarget.value)}
+                  disabled={running}
+                />
+                <Group>
+                  <Button
+                    onClick={handleRun}
+                    loading={running}
+                    disabled={running || !containerName.trim()}
+                    color="green"
+                  >
+                    Run Container
+                  </Button>
+                </Group>
+              </Stack>
+            )}
+
+            {containerId && (
+              <Button disabled color="green">
+                Container Running
               </Button>
             )}
-          </Group>
+          </Stack>
 
           {building && (
             <Paper withBorder p="md" bg="gray.0">
