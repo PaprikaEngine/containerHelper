@@ -23,12 +23,30 @@ pub fn generate_dockerfile(config: &EnvironmentConfig) -> String {
         }
     }
 
+    // Add SSH server if enabled
+    if let Some(ssh) = &config.ssh {
+        if ssh.enabled {
+            let ssh_commands = get_ssh_install_commands(&config.os.os_type, &ssh.password);
+            lines.push("# Install and configure SSH server".to_string());
+            lines.extend(ssh_commands);
+            lines.push(String::new());
+            lines.push(format!("EXPOSE {}", ssh.port));
+            lines.push(String::new());
+        }
+    }
+
     // Add common helpful commands
     lines.push("# Copy application files".to_string());
     lines.push("# COPY . .".to_string());
     lines.push(String::new());
     lines.push("# Set default command".to_string());
-    lines.push("CMD [\"/bin/bash\"]".to_string());
+
+    // Use sshd if SSH is enabled, otherwise bash
+    if config.ssh.as_ref().map_or(false, |s| s.enabled) {
+        lines.push("CMD [\"/usr/sbin/sshd\", \"-D\"]".to_string());
+    } else {
+        lines.push("CMD [\"/bin/bash\"]".to_string());
+    }
 
     lines.join("\n")
 }
@@ -39,6 +57,32 @@ fn get_os_image(os: &OsConfig) -> String {
         "debian" => format!("debian:{}", os.version),
         "alpine" => "alpine:latest".to_string(),
         _ => "ubuntu:22.04".to_string(),
+    }
+}
+
+fn get_ssh_install_commands(os_type: &str, password: &str) -> Vec<String> {
+    let is_alpine = os_type == "alpine";
+
+    if is_alpine {
+        vec![
+            "RUN apk update && \\".to_string(),
+            "    apk add --no-cache openssh && \\".to_string(),
+            "    ssh-keygen -A && \\".to_string(),
+            format!("    echo \"root:{}\" | chpasswd && \\", password),
+            "    sed -i \"s/#PermitRootLogin.*/PermitRootLogin yes/\" /etc/ssh/sshd_config && \\".to_string(),
+            "    sed -i \"s/#PasswordAuthentication.*/PasswordAuthentication yes/\" /etc/ssh/sshd_config".to_string(),
+        ]
+    } else {
+        // Debian/Ubuntu
+        vec![
+            "RUN apt-get update && \\".to_string(),
+            "    DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server && \\".to_string(),
+            "    mkdir -p /var/run/sshd && \\".to_string(),
+            format!("    echo \"root:{}\" | chpasswd && \\", password),
+            "    sed -i \"s/#\\?PermitRootLogin.*/PermitRootLogin yes/\" /etc/ssh/sshd_config && \\".to_string(),
+            "    sed -i \"s/#\\?PasswordAuthentication.*/PasswordAuthentication yes/\" /etc/ssh/sshd_config && \\".to_string(),
+            "    rm -rf /var/lib/apt/lists/*".to_string(),
+        ]
     }
 }
 
@@ -114,12 +158,15 @@ fn get_language_install_commands(language: &Language, os_type: &str) -> Vec<Stri
                 "/var/lib/apt/lists/*"
             };
 
+            let build_tools = if is_alpine {
+                "curl gcc musl-dev"
+            } else {
+                "curl build-essential"
+            };
+
             let mut commands = vec![
                 format!("RUN {} && \\", update_cmd),
-                format!(
-                    "    {} {} curl build-essential && \\",
-                    package_manager, install_flag
-                ),
+                format!("    {} {} {} && \\", package_manager, install_flag, build_tools),
                 "    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh && \\".to_string(),
                 format!("    sh rustup-init.sh -y {} && \\", nightly_flag),
                 "    rm rustup-init.sh && \\".to_string(),
@@ -149,6 +196,7 @@ mod tests {
                 name: "python".to_string(),
                 version: "3.11".to_string(),
             }],
+            ssh: None,
         };
 
         let dockerfile = generate_dockerfile(&config);
@@ -170,6 +218,7 @@ mod tests {
                 name: "nodejs".to_string(),
                 version: "20".to_string(),
             }],
+            ssh: None,
         };
 
         let dockerfile = generate_dockerfile(&config);
@@ -196,6 +245,7 @@ mod tests {
                     version: "stable".to_string(),
                 },
             ],
+            ssh: None,
         };
 
         let dockerfile = generate_dockerfile(&config);
