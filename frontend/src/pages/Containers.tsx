@@ -47,9 +47,18 @@ export function Containers() {
   };
 
   useEffect(() => {
-    fetchContainers();
-    // Auto-refresh every 5 seconds
-    const interval = setInterval(fetchContainers, 5000);
+    const fetching = { current: false };
+
+    const fetchAndPoll = async () => {
+      if (fetching.current) return;
+
+      fetching.current = true;
+      await fetchContainers();
+      fetching.current = false;
+    };
+
+    fetchAndPoll(); // Initial fetch
+    const interval = setInterval(fetchAndPoll, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -62,7 +71,7 @@ export function Containers() {
         color: 'green',
       });
       fetchContainers();
-    } catch (error) {
+    } catch {
       notifications.show({
         title: 'Error',
         message: `Failed to start container "${name}"`,
@@ -80,7 +89,7 @@ export function Containers() {
         color: 'green',
       });
       fetchContainers();
-    } catch (error) {
+    } catch {
       notifications.show({
         title: 'Error',
         message: `Failed to stop container "${name}"`,
@@ -102,7 +111,7 @@ export function Containers() {
       setDeleteModalOpen(false);
       setSelectedContainer(null);
       fetchContainers();
-    } catch (error) {
+    } catch {
       notifications.show({
         title: 'Error',
         message: `Failed to remove container "${selectedContainer.name}"`,

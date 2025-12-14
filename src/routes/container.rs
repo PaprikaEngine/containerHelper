@@ -4,18 +4,20 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{get, post},
     Json, Router,
 };
 use std::sync::Arc;
 
 pub fn container_routes() -> Router<Arc<DockerService>> {
     Router::new()
-        .route("/containers", get(list_containers))
-        .route("/containers/:id", get(get_container))
-        .route("/containers/:id/start", post(start_container))
-        .route("/containers/:id/stop", post(stop_container))
-        .route("/containers/:id", delete(remove_container))
+        .route("/api/containers", get(list_containers))
+        .route(
+            "/api/containers/:id",
+            get(get_container).delete(remove_container),
+        )
+        .route("/api/containers/:id/start", post(start_container))
+        .route("/api/containers/:id/stop", post(stop_container))
 }
 
 async fn list_containers(

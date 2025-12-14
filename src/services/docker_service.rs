@@ -86,17 +86,12 @@ impl DockerService {
             .status
             .map(|s| s.to_string())
             .unwrap_or_else(|| "unknown".to_string());
-        let status = format!("{} {}", state, state_obj.started_at.unwrap_or_default());
+        let status = state.clone();
 
         let created = container
             .created
-            .and_then(|c| {
-                // Try to parse as RFC3339 datetime
-                c.parse::<i64>().ok().or_else(|| {
-                    // If that fails, try other formats
-                    Some(0)
-                })
-            })
+            .and_then(|c| c.parse::<chrono::DateTime<chrono::Utc>>().ok())
+            .map(|dt| dt.timestamp())
             .unwrap_or_default();
 
         let ports: Vec<PortMapping> = container
