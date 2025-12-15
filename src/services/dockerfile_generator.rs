@@ -36,8 +36,13 @@ pub fn generate_dockerfile(config: &EnvironmentConfig) -> String {
             // Add entrypoint script to set password at runtime
             lines.push("# Create entrypoint script to set password securely".to_string());
             lines.push("RUN echo '#!/bin/sh' > /entrypoint.sh && \\".to_string());
-            lines.push("    echo 'if [ -n \"$ROOT_PASSWORD\" ]; then' >> /entrypoint.sh && \\".to_string());
-            lines.push("    echo '  echo \"root:$ROOT_PASSWORD\" | chpasswd' >> /entrypoint.sh && \\".to_string());
+            lines.push(
+                "    echo 'if [ -n \"$ROOT_PASSWORD\" ]; then' >> /entrypoint.sh && \\".to_string(),
+            );
+            lines.push(
+                "    echo '  echo \"root:$ROOT_PASSWORD\" | chpasswd' >> /entrypoint.sh && \\"
+                    .to_string(),
+            );
             lines.push("    echo 'fi' >> /entrypoint.sh && \\".to_string());
             lines.push("    echo 'exec \"$@\"' >> /entrypoint.sh && \\".to_string());
             lines.push("    chmod +x /entrypoint.sh".to_string());
