@@ -26,11 +26,23 @@ pub fn generate_dockerfile(config: &EnvironmentConfig) -> String {
     // Add SSH server if enabled
     if let Some(ssh) = &config.ssh {
         if ssh.enabled {
-            let ssh_commands = get_ssh_install_commands(&config.os.os_type, &ssh.password);
+            let ssh_commands = get_ssh_install_commands(&config.os.os_type);
             lines.push("# Install and configure SSH server".to_string());
             lines.extend(ssh_commands);
             lines.push(String::new());
             lines.push(format!("EXPOSE {}", ssh.port));
+            lines.push(String::new());
+
+            // Add entrypoint script to set password at runtime
+            lines.push("# Create entrypoint script to set password securely".to_string());
+            lines.push("RUN echo '#!/bin/sh' > /entrypoint.sh && \\".to_string());
+            lines.push("    echo 'if [ -n \"$ROOT_PASSWORD\" ]; then' >> /entrypoint.sh && \\".to_string());
+            lines.push("    echo '  echo \"root:$ROOT_PASSWORD\" | chpasswd' >> /entrypoint.sh && \\".to_string());
+            lines.push("    echo 'fi' >> /entrypoint.sh && \\".to_string());
+            lines.push("    echo 'exec \"$@\"' >> /entrypoint.sh && \\".to_string());
+            lines.push("    chmod +x /entrypoint.sh".to_string());
+            lines.push(String::new());
+            lines.push("ENTRYPOINT [\"/entrypoint.sh\"]".to_string());
             lines.push(String::new());
         }
     }
@@ -60,7 +72,7 @@ fn get_os_image(os: &OsConfig) -> String {
     }
 }
 
-fn get_ssh_install_commands(os_type: &str, password: &str) -> Vec<String> {
+fn get_ssh_install_commands(os_type: &str) -> Vec<String> {
     let is_alpine = os_type == "alpine";
 
     if is_alpine {
@@ -68,7 +80,6 @@ fn get_ssh_install_commands(os_type: &str, password: &str) -> Vec<String> {
             "RUN apk update && \\".to_string(),
             "    apk add --no-cache openssh && \\".to_string(),
             "    ssh-keygen -A && \\".to_string(),
-            format!("    echo \"root:{}\" | chpasswd && \\", password),
             "    sed -i \"s/#PermitRootLogin.*/PermitRootLogin yes/\" /etc/ssh/sshd_config && \\".to_string(),
             "    sed -i \"s/#PasswordAuthentication.*/PasswordAuthentication yes/\" /etc/ssh/sshd_config".to_string(),
         ]
@@ -78,7 +89,6 @@ fn get_ssh_install_commands(os_type: &str, password: &str) -> Vec<String> {
             "RUN apt-get update && \\".to_string(),
             "    DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server && \\".to_string(),
             "    mkdir -p /var/run/sshd && \\".to_string(),
-            format!("    echo \"root:{}\" | chpasswd && \\", password),
             "    sed -i \"s/#\\?PermitRootLogin.*/PermitRootLogin yes/\" /etc/ssh/sshd_config && \\".to_string(),
             "    sed -i \"s/#\\?PasswordAuthentication.*/PasswordAuthentication yes/\" /etc/ssh/sshd_config && \\".to_string(),
             "    rm -rf /var/lib/apt/lists/*".to_string(),

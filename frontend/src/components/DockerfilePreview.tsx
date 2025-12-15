@@ -100,12 +100,18 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
         ? { '22': `${config.ssh.port}` }
         : undefined;
 
+      // Add ROOT_PASSWORD environment variable if SSH is enabled
+      const env = config.ssh?.enabled && config.ssh.password
+        ? [`ROOT_PASSWORD=${config.ssh.password}`]
+        : undefined;
+
       // Add timestamp to make container name unique
       const uniqueContainerName = `${containerName}-${Date.now()}`;
 
       const result = await apiClient.runContainer(builtImageTag, {
         name: uniqueContainerName,
         ports,
+        env,
       });
       setContainerId(result.container_id);
     } catch (err) {

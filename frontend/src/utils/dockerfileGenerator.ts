@@ -29,11 +29,23 @@ export const generateDockerfile = (config: EnvironmentConfig): string => {
 
   // Add SSH server if enabled
   if (config.ssh?.enabled) {
-    const sshCommands = getSSHInstallCommands(config.os.type, config.ssh.password);
+    const sshCommands = getSSHInstallCommands(config.os.type);
     lines.push('# Install and configure SSH server');
     lines.push(...sshCommands);
     lines.push('');
     lines.push(`EXPOSE ${config.ssh.port}`);
+    lines.push('');
+
+    // Add entrypoint script to set password at runtime
+    lines.push('# Create entrypoint script to set password securely');
+    lines.push("RUN echo '#!/bin/sh' > /entrypoint.sh && \\");
+    lines.push("    echo 'if [ -n \"$ROOT_PASSWORD\" ]; then' >> /entrypoint.sh && \\");
+    lines.push("    echo '  echo \"root:$ROOT_PASSWORD\" | chpasswd' >> /entrypoint.sh && \\");
+    lines.push("    echo 'fi' >> /entrypoint.sh && \\");
+    lines.push("    echo 'exec \"$@\"' >> /entrypoint.sh && \\");
+    lines.push('    chmod +x /entrypoint.sh');
+    lines.push('');
+    lines.push('ENTRYPOINT ["/entrypoint.sh"]');
     lines.push('');
   }
 
@@ -64,7 +76,7 @@ const getOSImage = (osType: string, version: string): string => {
   }
 };
 
-const getSSHInstallCommands = (osType: string, password: string): string[] => {
+const getSSHInstallCommands = (osType: string): string[] => {
   const isAlpine = osType === 'alpine';
 
   if (isAlpine) {
@@ -72,7 +84,6 @@ const getSSHInstallCommands = (osType: string, password: string): string[] => {
       'RUN apk update && \\',
       '    apk add --no-cache openssh && \\',
       '    ssh-keygen -A && \\',
-      `    echo "root:${password}" | chpasswd && \\`,
       '    sed -i "s/#PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
       '    sed -i "s/#PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config',
     ];
@@ -83,7 +94,6 @@ const getSSHInstallCommands = (osType: string, password: string): string[] => {
     'RUN apt-get update && \\',
     '    DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server && \\',
     '    mkdir -p /var/run/sshd && \\',
-    `    echo "root:${password}" | chpasswd && \\`,
     '    sed -i "s/#\\?PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
     '    sed -i "s/#\\?PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config && \\',
     '    rm -rf /var/lib/apt/lists/*',
