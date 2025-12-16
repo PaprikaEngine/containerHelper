@@ -151,6 +151,7 @@ export function Generator() {
       onNext={handleNext}
       onPrev={handlePrev}
       nextDisabled={isNextDisabled()}
+      hideNavigation={currentStep === TOTAL_STEPS}
     >
       {renderStepContent()}
     </StepLayout>

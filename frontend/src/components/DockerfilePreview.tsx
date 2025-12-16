@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Title, Text, Stack, Paper, Code, Loader, Alert, Button, Group, TextInput } from '@mantine/core';
+import { useNavigate } from 'react-router-dom';
 import type { EnvironmentConfig } from '../types/config';
 import { apiClient, ApiError } from '../services/api';
 
 interface DockerfilePreviewProps {
   config: EnvironmentConfig;
+  onContainerCreated?: (containerId: string) => void;
 }
 
 // Sanitize name for Docker (only lowercase alphanumeric, underscore, period, hyphen)
@@ -17,7 +19,8 @@ const sanitizeDockerName = (name: string): string => {
     .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 };
 
-export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) => {
+export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config, onContainerCreated }) => {
+  const navigate = useNavigate();
   const [dockerfile, setDockerfile] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +123,9 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
         env: env.length > 0 ? env : undefined,
       });
       setContainerId(result.container_id);
+      onContainerCreated?.(result.container_id);
+      // Navigate to containers page after successful creation
+      navigate('/containers');
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

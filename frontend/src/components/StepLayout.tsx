@@ -9,6 +9,7 @@ interface StepLayoutProps {
   onNext?: () => void;
   onPrev?: () => void;
   nextDisabled?: boolean;
+  hideNavigation?: boolean;
 }
 
 export const StepLayout: React.FC<StepLayoutProps> = ({
@@ -19,6 +20,7 @@ export const StepLayout: React.FC<StepLayoutProps> = ({
   onNext,
   onPrev,
   nextDisabled = false,
+  hideNavigation = false,
 }) => {
   const progressValue = (currentStep / totalSteps) * 100;
 
@@ -49,24 +51,26 @@ export const StepLayout: React.FC<StepLayoutProps> = ({
           </Stack>
 
           {/* Navigation buttons */}
-          <Group justify="space-between">
-            <Button
-              variant="outline"
-              onClick={onPrev}
-              disabled={currentStep === 1}
-              size="md"
-            >
-              Previous
-            </Button>
+          {!hideNavigation && (
+            <Group justify="space-between">
+              <Button
+                variant="outline"
+                onClick={onPrev}
+                disabled={currentStep === 1}
+                size="md"
+              >
+                Previous
+              </Button>
 
-            <Button
-              onClick={onNext}
-              disabled={nextDisabled || currentStep === totalSteps}
-              size="md"
-            >
-              {currentStep === totalSteps ? 'Run Container' : 'Next'}
-            </Button>
-          </Group>
+              <Button
+                onClick={onNext}
+                disabled={nextDisabled}
+                size="md"
+              >
+                Next
+              </Button>
+            </Group>
+          )}
         </Paper>
       </Stack>
     </Container>
