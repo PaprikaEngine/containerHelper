@@ -45,7 +45,7 @@ export const generateDockerfile = (config: EnvironmentConfig): string => {
     lines.push("    echo 'if [ -n \"$SSH_PUBLIC_KEY\" ]; then' >> /entrypoint.sh && \\");
     lines.push("    echo '  mkdir -p /root/.ssh' >> /entrypoint.sh && \\");
     lines.push("    echo '  chmod 700 /root/.ssh' >> /entrypoint.sh && \\");
-    lines.push("    echo '  echo \"$SSH_PUBLIC_KEY\" >> /root/.ssh/authorized_keys' >> /entrypoint.sh && \\");
+    lines.push("    echo '  printf \"%s\\n\" \"$SSH_PUBLIC_KEY\" >> /root/.ssh/authorized_keys' >> /entrypoint.sh && \\");
     lines.push("    echo '  chmod 600 /root/.ssh/authorized_keys' >> /entrypoint.sh && \\");
     lines.push("    echo 'fi' >> /entrypoint.sh && \\");
     lines.push("    echo 'exec \"$@\"' >> /entrypoint.sh && \\");

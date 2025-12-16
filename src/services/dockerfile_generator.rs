@@ -51,7 +51,7 @@ pub fn generate_dockerfile(config: &EnvironmentConfig) -> String {
             lines.push("    echo '  mkdir -p /root/.ssh' >> /entrypoint.sh && \\".to_string());
             lines.push("    echo '  chmod 700 /root/.ssh' >> /entrypoint.sh && \\".to_string());
             lines.push(
-                "    echo '  echo \"$SSH_PUBLIC_KEY\" >> /root/.ssh/authorized_keys' >> /entrypoint.sh && \\".to_string(),
+                "    echo '  printf \"%s\\n\" \"$SSH_PUBLIC_KEY\" >> /root/.ssh/authorized_keys' >> /entrypoint.sh && \\".to_string(),
             );
             lines.push(
                 "    echo '  chmod 600 /root/.ssh/authorized_keys' >> /entrypoint.sh && \\"

@@ -25,8 +25,9 @@ export function SshConfiguration({ config, onConfigChange, onPortValidationChang
       onPortValidationChange?.(!result.in_use);
     } catch (error) {
       console.error('Failed to check port:', error);
+      // Treat validation failure as invalid to prevent potential port conflicts
       setPortInUse(false);
-      onPortValidationChange?.(true);
+      onPortValidationChange?.(false);
     } finally {
       setCheckingPort(false);
     }
