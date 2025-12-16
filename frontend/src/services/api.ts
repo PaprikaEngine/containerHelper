@@ -25,6 +25,10 @@ export interface RunResponse {
   container_id: string;
 }
 
+export interface PortCheckResponse {
+  in_use: boolean;
+}
+
 export class ApiError extends Error {
   statusCode: number;
 
@@ -56,6 +60,7 @@ export const apiClient = {
           enabled: config.ssh.enabled,
           port: config.ssh.port,
           password: config.ssh.password,
+          public_key: config.ssh.publicKey,
         } : undefined,
       }),
     });
@@ -110,6 +115,25 @@ export const apiClient = {
     if (!response.ok) {
       const errorData: ErrorResponse = await response.json().catch(() => ({
         error: 'Failed to run container',
+      }));
+      throw new ApiError(response.status, errorData.error);
+    }
+
+    return await response.json();
+  },
+
+  async checkPort(port: number): Promise<PortCheckResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/containers/ports/check`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ port }),
+    });
+
+    if (!response.ok) {
+      const errorData: ErrorResponse = await response.json().catch(() => ({
+        error: 'Failed to check port',
       }));
       throw new ApiError(response.status, errorData.error);
     }

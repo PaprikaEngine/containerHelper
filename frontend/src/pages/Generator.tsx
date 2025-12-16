@@ -52,6 +52,7 @@ export function Generator() {
       },
     }
   );
+  const [isPortValid, setIsPortValid] = useState(true);
 
   // 状態が変更されたらLocalStorageに保存
   useEffect(() => {
@@ -86,6 +87,10 @@ export function Generator() {
     setConfig(prev => ({ ...prev, ssh }));
   };
 
+  const handlePortValidationChange = (isValid: boolean) => {
+    setIsPortValid(isValid);
+  };
+
   const isNextDisabled = () => {
     switch (currentStep) {
       case 1:
@@ -93,9 +98,9 @@ export function Generator() {
       case 2:
         return config.languages.length === 0;
       case 3:
-        // SSH設定が有効な場合、パスワードが必須
+        // SSH設定が有効な場合、パスワードとポート検証が必須
         if (config.ssh?.enabled) {
-          return !config.ssh.password || config.ssh.password.length < 6;
+          return !config.ssh.password || config.ssh.password.length < 6 || !isPortValid;
         }
         return false;
       default:
@@ -124,6 +129,7 @@ export function Generator() {
           <SshConfiguration
             config={config.ssh || { enabled: false, port: 2222, password: '' }}
             onConfigChange={handleSshConfigChange}
+            onPortValidationChange={handlePortValidationChange}
           />
         );
       case 4:

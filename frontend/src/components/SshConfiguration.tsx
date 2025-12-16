@@ -1,13 +1,59 @@
-import { Stack, Title, Text, Switch, NumberInput, PasswordInput } from '@mantine/core';
-import { IconKey } from '@tabler/icons-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Stack, Title, Text, Switch, NumberInput, PasswordInput, Textarea, Loader } from '@mantine/core';
+import { IconKey, IconAlertCircle, IconLock } from '@tabler/icons-react';
 import type { SshConfig } from '../types/config';
+import { apiClient } from '../services/api';
 
 interface SshConfigurationProps {
   config: SshConfig;
   onConfigChange: (config: SshConfig) => void;
+  onPortValidationChange?: (isValid: boolean) => void;
 }
 
-export function SshConfiguration({ config, onConfigChange }: SshConfigurationProps) {
+export function SshConfiguration({ config, onConfigChange, onPortValidationChange }: SshConfigurationProps) {
+  const [portInUse, setPortInUse] = useState(false);
+  const [checkingPort, setCheckingPort] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const checkPortAvailability = useCallback(async (port: number) => {
+    if (!config.enabled) return;
+
+    setCheckingPort(true);
+    try {
+      const result = await apiClient.checkPort(port);
+      setPortInUse(result.in_use);
+      onPortValidationChange?.(!result.in_use);
+    } catch (error) {
+      console.error('Failed to check port:', error);
+      setPortInUse(false);
+      onPortValidationChange?.(true);
+    } finally {
+      setCheckingPort(false);
+    }
+  }, [config.enabled, onPortValidationChange]);
+
+  useEffect(() => {
+    if (!config.enabled) {
+      setPortInUse(false);
+      onPortValidationChange?.(true);
+      return;
+    }
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    debounceTimer.current = setTimeout(() => {
+      checkPortAvailability(config.port);
+    }, 500);
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [config.port, config.enabled, checkPortAvailability]);
+
   const handleEnabledChange = (enabled: boolean) => {
     onConfigChange({ ...config, enabled });
   };
@@ -18,6 +64,10 @@ export function SshConfiguration({ config, onConfigChange }: SshConfigurationPro
 
   const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onConfigChange({ ...config, password: event.currentTarget.value });
+  };
+
+  const handlePublicKeyChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onConfigChange({ ...config, publicKey: event.currentTarget.value });
   };
 
   return (
@@ -48,6 +98,8 @@ export function SshConfiguration({ config, onConfigChange }: SshConfigurationPro
             min={1024}
             max={65535}
             required
+            error={portInUse ? 'This port is already in use by another container' : undefined}
+            rightSection={checkingPort ? <Loader size="xs" /> : (portInUse ? <IconAlertCircle size={16} color="red" /> : null)}
           />
 
           <PasswordInput
@@ -61,8 +113,19 @@ export function SshConfiguration({ config, onConfigChange }: SshConfigurationPro
             required
           />
 
-          <Text size="sm" c="orange">
-            Warning: For production use, consider using SSH key-based authentication instead of password authentication.
+          <Textarea
+            label="SSH Public Key (Optional)"
+            description="Add your SSH public key for key-based authentication (e.g., contents of ~/.ssh/id_rsa.pub)"
+            placeholder="ssh-rsa AAAA... or ssh-ed25519 AAAA..."
+            value={config.publicKey || ''}
+            onChange={handlePublicKeyChange}
+            leftSection={<IconLock size={16} />}
+            minRows={3}
+            autosize
+          />
+
+          <Text size="sm" c="dimmed">
+            Tip: If you provide a public key, you can use key-based authentication which is more secure than password authentication.
           </Text>
         </Stack>
       )}
