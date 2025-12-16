@@ -33,14 +33,28 @@ pub fn generate_dockerfile(config: &EnvironmentConfig) -> String {
             lines.push(format!("EXPOSE {}", ssh.port));
             lines.push(String::new());
 
-            // Add entrypoint script to set password at runtime
-            lines.push("# Create entrypoint script to set password securely".to_string());
+            // Add entrypoint script to set password and public key at runtime
+            lines.push("# Create entrypoint script to set credentials securely".to_string());
             lines.push("RUN echo '#!/bin/sh' > /entrypoint.sh && \\".to_string());
             lines.push(
                 "    echo 'if [ -n \"$ROOT_PASSWORD\" ]; then' >> /entrypoint.sh && \\".to_string(),
             );
             lines.push(
                 "    echo '  echo \"root:$ROOT_PASSWORD\" | chpasswd' >> /entrypoint.sh && \\"
+                    .to_string(),
+            );
+            lines.push("    echo 'fi' >> /entrypoint.sh && \\".to_string());
+            lines.push(
+                "    echo 'if [ -n \"$SSH_PUBLIC_KEY\" ]; then' >> /entrypoint.sh && \\"
+                    .to_string(),
+            );
+            lines.push("    echo '  mkdir -p /root/.ssh' >> /entrypoint.sh && \\".to_string());
+            lines.push("    echo '  chmod 700 /root/.ssh' >> /entrypoint.sh && \\".to_string());
+            lines.push(
+                "    echo '  printf \"%s\\n\" \"$SSH_PUBLIC_KEY\" >> /root/.ssh/authorized_keys' >> /entrypoint.sh && \\".to_string(),
+            );
+            lines.push(
+                "    echo '  chmod 600 /root/.ssh/authorized_keys' >> /entrypoint.sh && \\"
                     .to_string(),
             );
             lines.push("    echo 'fi' >> /entrypoint.sh && \\".to_string());

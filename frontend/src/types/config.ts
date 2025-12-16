@@ -12,6 +12,7 @@ export interface SshConfig {
   enabled: boolean;
   port: number;
   password: string;
+  publicKey?: string;
 }
 
 export interface EnvironmentConfig {

@@ -296,36 +296,16 @@ export function Containers() {
                     <Table.Td>{formatPorts(container.ports)}</Table.Td>
                     <Table.Td>{formatDate(container.created)}</Table.Td>
                     <Table.Td>
-                      <Group gap="xs">
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: '4px', width: 'fit-content' }}>
                         {container.state.toLowerCase() === 'running' ? (
-                          <>
-                            <ActionIcon
-                              color="blue"
-                              variant="light"
-                              onClick={() => handleCopyCommand(container.id, container.image)}
-                              title="Copy docker exec command"
-                            >
-                              <IconTerminal size={16} />
-                            </ActionIcon>
-                            {container.ports.some(p => p.private_port === 22 || p.public_port === 22) && (
-                              <ActionIcon
-                                color="cyan"
-                                variant="light"
-                                onClick={() => handleCopySSHCommand(container.ports)}
-                                title="Copy SSH connection command"
-                              >
-                                <IconKey size={16} />
-                              </ActionIcon>
-                            )}
-                            <ActionIcon
-                              color="yellow"
-                              variant="light"
-                              onClick={() => handleStop(container.id, container.name)}
-                              title="Stop container"
-                            >
-                              <IconPlayerPause size={16} />
-                            </ActionIcon>
-                          </>
+                          <ActionIcon
+                            color="blue"
+                            variant="light"
+                            onClick={() => handleCopyCommand(container.id, container.image)}
+                            title="Copy docker exec command"
+                          >
+                            <IconTerminal size={16} />
+                          </ActionIcon>
                         ) : (
                           <ActionIcon
                             color="green"
@@ -336,6 +316,31 @@ export function Containers() {
                             <IconPlayerPlay size={16} />
                           </ActionIcon>
                         )}
+                        {container.state.toLowerCase() === 'running' ? (
+                          <ActionIcon
+                            color="yellow"
+                            variant="light"
+                            onClick={() => handleStop(container.id, container.name)}
+                            title="Stop container"
+                          >
+                            <IconPlayerPause size={16} />
+                          </ActionIcon>
+                        ) : (
+                          <div />
+                        )}
+                        {container.state.toLowerCase() === 'running' &&
+                          container.ports.some(p => p.private_port === 22 || p.public_port === 22) ? (
+                            <ActionIcon
+                              color="cyan"
+                              variant="light"
+                              onClick={() => handleCopySSHCommand(container.ports)}
+                              title="Copy SSH connection command"
+                            >
+                              <IconKey size={16} />
+                            </ActionIcon>
+                          ) : (
+                            <div />
+                          )}
                         <ActionIcon
                           color="red"
                           variant="light"
@@ -344,7 +349,7 @@ export function Containers() {
                         >
                           <IconTrash size={16} />
                         </ActionIcon>
-                      </Group>
+                      </div>
                     </Table.Td>
                   </Table.Tr>
                 ))}

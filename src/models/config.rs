@@ -17,6 +17,7 @@ pub struct SshConfig {
     pub enabled: bool,
     pub port: u16,
     pub password: String,
+    pub public_key: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -36,12 +36,23 @@ pub struct RunResponse {
     pub container_id: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PortCheckRequest {
+    pub port: u16,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PortCheckResponse {
+    pub in_use: bool,
+}
+
 pub fn container_routes() -> Router<Arc<DockerService>> {
     Router::new()
         .route("/api/containers", get(list_containers))
         // Specific routes must come before parameterized routes
         .route("/api/containers/build", post(build_image))
         .route("/api/containers/run", post(run_container))
+        .route("/api/containers/ports/check", post(check_port))
         .route(
             "/api/containers/:id",
             get(get_container).delete(remove_container),
@@ -174,6 +185,24 @@ async fn run_container(
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to run container: {}", e),
+            ))
+        }
+    }
+}
+
+async fn check_port(
+    State(docker_service): State<Arc<DockerService>>,
+    Json(request): Json<PortCheckRequest>,
+) -> Result<Json<PortCheckResponse>, (StatusCode, String)> {
+    tracing::info!("Checking if port {} is in use", request.port);
+
+    match docker_service.is_port_in_use(request.port).await {
+        Ok(in_use) => Ok(Json(PortCheckResponse { in_use })),
+        Err(e) => {
+            tracing::error!("Failed to check port: {}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to check port: {}", e),
             ))
         }
     }

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Title, Text, Stack, Paper, Code, Loader, Alert, Button, Group, TextInput } from '@mantine/core';
+import { useNavigate } from 'react-router-dom';
 import type { EnvironmentConfig } from '../types/config';
 import { apiClient, ApiError } from '../services/api';
 
 interface DockerfilePreviewProps {
   config: EnvironmentConfig;
+  onContainerCreated?: (containerId: string) => void;
 }
 
 // Sanitize name for Docker (only lowercase alphanumeric, underscore, period, hyphen)
@@ -17,7 +19,8 @@ const sanitizeDockerName = (name: string): string => {
     .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 };
 
-export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) => {
+export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config, onContainerCreated }) => {
+  const navigate = useNavigate();
   const [dockerfile, setDockerfile] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,10 +103,16 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
         ? { '22': `${config.ssh.port}` }
         : undefined;
 
-      // Add ROOT_PASSWORD environment variable if SSH is enabled
-      const env = config.ssh?.enabled && config.ssh.password
-        ? [`ROOT_PASSWORD=${config.ssh.password}`]
-        : undefined;
+      // Add environment variables for SSH authentication
+      const env: string[] = [];
+      if (config.ssh?.enabled) {
+        if (config.ssh.password) {
+          env.push(`ROOT_PASSWORD=${config.ssh.password}`);
+        }
+        if (config.ssh.publicKey) {
+          env.push(`SSH_PUBLIC_KEY=${config.ssh.publicKey}`);
+        }
+      }
 
       // Add timestamp to make container name unique
       const uniqueContainerName = `${containerName}-${Date.now()}`;
@@ -111,9 +120,12 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
       const result = await apiClient.runContainer(builtImageTag, {
         name: uniqueContainerName,
         ports,
-        env,
+        env: env.length > 0 ? env : undefined,
       });
       setContainerId(result.container_id);
+      onContainerCreated?.(result.container_id);
+      // Navigate to containers page after successful creation
+      navigate('/containers');
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

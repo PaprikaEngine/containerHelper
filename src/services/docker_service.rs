@@ -280,6 +280,27 @@ impl DockerService {
         Ok(container.id)
     }
 
+    pub async fn is_port_in_use(&self, port: u16) -> Result<bool> {
+        let containers = self.list_containers().await?;
+
+        for container in containers {
+            // Only check running containers
+            if container.state.to_lowercase() != "running" {
+                continue;
+            }
+
+            for port_mapping in container.ports {
+                if let Some(public_port) = port_mapping.public_port {
+                    if public_port == port {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+
+        Ok(false)
+    }
+
     fn create_dockerfile_tar(&self, dockerfile_content: &str) -> Result<Vec<u8>> {
         use tar::Builder;
 
