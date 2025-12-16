@@ -36,11 +36,17 @@ export const generateDockerfile = (config: EnvironmentConfig): string => {
     lines.push(`EXPOSE ${config.ssh.port}`);
     lines.push('');
 
-    // Add entrypoint script to set password at runtime
-    lines.push('# Create entrypoint script to set password securely');
+    // Add entrypoint script to set password and public key at runtime
+    lines.push('# Create entrypoint script to set credentials securely');
     lines.push("RUN echo '#!/bin/sh' > /entrypoint.sh && \\");
     lines.push("    echo 'if [ -n \"$ROOT_PASSWORD\" ]; then' >> /entrypoint.sh && \\");
     lines.push("    echo '  echo \"root:$ROOT_PASSWORD\" | chpasswd' >> /entrypoint.sh && \\");
+    lines.push("    echo 'fi' >> /entrypoint.sh && \\");
+    lines.push("    echo 'if [ -n \"$SSH_PUBLIC_KEY\" ]; then' >> /entrypoint.sh && \\");
+    lines.push("    echo '  mkdir -p /root/.ssh' >> /entrypoint.sh && \\");
+    lines.push("    echo '  chmod 700 /root/.ssh' >> /entrypoint.sh && \\");
+    lines.push("    echo '  echo \"$SSH_PUBLIC_KEY\" >> /root/.ssh/authorized_keys' >> /entrypoint.sh && \\");
+    lines.push("    echo '  chmod 600 /root/.ssh/authorized_keys' >> /entrypoint.sh && \\");
     lines.push("    echo 'fi' >> /entrypoint.sh && \\");
     lines.push("    echo 'exec \"$@\"' >> /entrypoint.sh && \\");
     lines.push('    chmod +x /entrypoint.sh');
