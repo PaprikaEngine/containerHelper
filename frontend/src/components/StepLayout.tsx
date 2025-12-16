@@ -64,7 +64,7 @@ export const StepLayout: React.FC<StepLayoutProps> = ({
               disabled={nextDisabled || currentStep === totalSteps}
               size="md"
             >
-              {currentStep === totalSteps ? 'Finish' : 'Next'}
+              {currentStep === totalSteps ? 'Run Container' : 'Next'}
             </Button>
           </Group>
         </Paper>
