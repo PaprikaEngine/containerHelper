@@ -296,18 +296,41 @@ export function Containers() {
                     <Table.Td>{formatPorts(container.ports)}</Table.Td>
                     <Table.Td>{formatDate(container.created)}</Table.Td>
                     <Table.Td>
-                      <Group gap="xs">
-                        {container.state.toLowerCase() === 'running' ? (
-                          <>
+                      <Stack gap={4}>
+                        <Group gap="xs">
+                          {container.state.toLowerCase() === 'running' ? (
+                            <>
+                              <ActionIcon
+                                color="blue"
+                                variant="light"
+                                onClick={() => handleCopyCommand(container.id, container.image)}
+                                title="Copy docker exec command"
+                              >
+                                <IconTerminal size={16} />
+                              </ActionIcon>
+                              <ActionIcon
+                                color="yellow"
+                                variant="light"
+                                onClick={() => handleStop(container.id, container.name)}
+                                title="Stop container"
+                              >
+                                <IconPlayerPause size={16} />
+                              </ActionIcon>
+                            </>
+                          ) : (
                             <ActionIcon
-                              color="blue"
+                              color="green"
                               variant="light"
-                              onClick={() => handleCopyCommand(container.id, container.image)}
-                              title="Copy docker exec command"
+                              onClick={() => handleStart(container.id, container.name)}
+                              title="Start container"
                             >
-                              <IconTerminal size={16} />
+                              <IconPlayerPlay size={16} />
                             </ActionIcon>
-                            {container.ports.some(p => p.private_port === 22 || p.public_port === 22) && (
+                          )}
+                        </Group>
+                        <Group gap="xs">
+                          {container.state.toLowerCase() === 'running' &&
+                            container.ports.some(p => p.private_port === 22 || p.public_port === 22) && (
                               <ActionIcon
                                 color="cyan"
                                 variant="light"
@@ -317,34 +340,16 @@ export function Containers() {
                                 <IconKey size={16} />
                               </ActionIcon>
                             )}
-                            <ActionIcon
-                              color="yellow"
-                              variant="light"
-                              onClick={() => handleStop(container.id, container.name)}
-                              title="Stop container"
-                            >
-                              <IconPlayerPause size={16} />
-                            </ActionIcon>
-                          </>
-                        ) : (
                           <ActionIcon
-                            color="green"
+                            color="red"
                             variant="light"
-                            onClick={() => handleStart(container.id, container.name)}
-                            title="Start container"
+                            onClick={() => openDeleteModal(container)}
+                            title="Remove container"
                           >
-                            <IconPlayerPlay size={16} />
+                            <IconTrash size={16} />
                           </ActionIcon>
-                        )}
-                        <ActionIcon
-                          color="red"
-                          variant="light"
-                          onClick={() => openDeleteModal(container)}
-                          title="Remove container"
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
+                        </Group>
+                      </Stack>
                     </Table.Td>
                   </Table.Tr>
                 ))}
