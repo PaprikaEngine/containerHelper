@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { StepLayout } from '../components/StepLayout';
 import { OSSelection } from '../components/OSSelection';
 import { LanguageSelection } from '../components/LanguageSelection';
+import { SshConfiguration } from '../components/SshConfiguration';
 import { DockerfilePreview } from '../components/DockerfilePreview';
-import type { EnvironmentConfig, OsConfig, Language } from '../types/config';
+import type { EnvironmentConfig, OsConfig, Language, SshConfig } from '../types/config';
 import { TOTAL_STEPS } from '../constants/options';
 
 const STORAGE_KEY = 'containerHelper.generatorState';
@@ -44,6 +45,11 @@ export function Generator() {
     initialState?.config ?? {
       os: { type: '', version: '' },
       languages: [],
+      ssh: {
+        enabled: false,
+        port: 2222,
+        password: '',
+      },
     }
   );
 
@@ -76,12 +82,22 @@ export function Generator() {
     setConfig(prev => ({ ...prev, languages }));
   };
 
+  const handleSshConfigChange = (ssh: SshConfig) => {
+    setConfig(prev => ({ ...prev, ssh }));
+  };
+
   const isNextDisabled = () => {
     switch (currentStep) {
       case 1:
         return !config.os.type || !config.os.version;
       case 2:
         return config.languages.length === 0;
+      case 3:
+        // SSH設定が有効な場合、パスワードが必須
+        if (config.ssh?.enabled) {
+          return !config.ssh.password || config.ssh.password.length < 6;
+        }
+        return false;
       default:
         return false;
     }
@@ -104,6 +120,13 @@ export function Generator() {
           />
         );
       case 3:
+        return (
+          <SshConfiguration
+            config={config.ssh || { enabled: false, port: 2222, password: '' }}
+            onConfigChange={handleSshConfigChange}
+          />
+        );
+      case 4:
         return (
           <DockerfilePreview
             config={config}

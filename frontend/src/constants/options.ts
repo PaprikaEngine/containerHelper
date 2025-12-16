@@ -10,4 +10,4 @@ export const LANGUAGE_OPTIONS = [
   { name: 'rust', displayName: 'Rust', versions: ['stable', 'nightly'] },
 ] as const;
 
-export const TOTAL_STEPS = 3;
+export const TOTAL_STEPS = 4;

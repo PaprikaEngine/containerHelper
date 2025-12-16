@@ -94,8 +94,24 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
     setContainerId(null);
 
     try {
+      // Add SSH port mapping if SSH is enabled
+      // Format: { "container_port": "host_port" }
+      const ports = config.ssh?.enabled && config.ssh.port
+        ? { '22': `${config.ssh.port}` }
+        : undefined;
+
+      // Add ROOT_PASSWORD environment variable if SSH is enabled
+      const env = config.ssh?.enabled && config.ssh.password
+        ? [`ROOT_PASSWORD=${config.ssh.password}`]
+        : undefined;
+
+      // Add timestamp to make container name unique
+      const uniqueContainerName = `${containerName}-${Date.now()}`;
+
       const result = await apiClient.runContainer(builtImageTag, {
-        name: containerName,
+        name: uniqueContainerName,
+        ports,
+        env,
       });
       setContainerId(result.container_id);
     } catch (err) {
@@ -127,6 +143,11 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
             <Text size="sm" c="dimmed">
               Languages: {config.languages.map(lang => `${lang.name} ${lang.version}`).join(', ')}
             </Text>
+            {config.ssh?.enabled && (
+              <Text size="sm" c="dimmed">
+                SSH Server: Enabled (Port {config.ssh.port})
+              </Text>
+            )}
           </div>
         </Stack>
       </Paper>
@@ -200,24 +221,40 @@ export const DockerfilePreview: React.FC<DockerfilePreviewProps> = ({ config }) 
               <Stack gap="sm">
                 <Group gap="sm">
                   <Loader size="sm" />
-                  <Text fw={500} size="sm">Building image...</Text>
+                  <Text fw={500} size="sm">Building Docker image...</Text>
                 </Group>
+                <Text size="sm" c="dimmed">
+                  This may take a few minutes depending on the selected languages and packages.
+                </Text>
               </Stack>
             </Paper>
           )}
 
           {buildLogs.length > 0 && (
-            <Stack gap="xs">
-              <Text fw={500}>Build Logs:</Text>
-              <Code block style={{
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'monospace',
-                maxHeight: '300px',
-                overflowY: 'auto'
-              }}>
-                {buildLogs.join('')}
-              </Code>
-            </Stack>
+            <Paper withBorder p="md">
+              <Stack gap="md">
+                <Group gap="sm">
+                  <Text fw={600} size="md">📋 Build Logs</Text>
+                  {building && <Loader size="xs" />}
+                </Group>
+                <Code
+                  block
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    backgroundColor: '#1e1e1e',
+                    color: '#d4d4d4',
+                    padding: '12px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  {buildLogs.join('')}
+                </Code>
+              </Stack>
+            </Paper>
           )}
 
           {builtImageTag && !containerId && (

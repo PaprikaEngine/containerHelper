@@ -15,7 +15,7 @@ import {
   Alert,
   Code,
 } from '@mantine/core';
-import { IconRefresh, IconPlayerPlay, IconPlayerPause, IconTrash, IconSearch, IconTerminal } from '@tabler/icons-react';
+import { IconRefresh, IconPlayerPlay, IconPlayerPause, IconTrash, IconSearch, IconTerminal, IconKey } from '@tabler/icons-react';
 import { containerApi, type ContainerInfo } from '../api/containers';
 import { notifications } from '@mantine/notifications';
 
@@ -141,6 +141,34 @@ export function Containers() {
       notifications.show({
         title: 'Error',
         message: 'Failed to copy command to clipboard',
+        color: 'red',
+      });
+      console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  const handleCopySSHCommand = async (ports: ContainerInfo['ports']) => {
+    // Find SSH port mapping (port 22 in either private or public port)
+    const sshPort = ports.find(p => p.private_port === 22 || p.public_port === 22);
+    if (!sshPort) return;
+
+    // Determine which port is the host port (the one that's not 22)
+    const hostPort = sshPort.private_port === 22 ? sshPort.public_port : sshPort.private_port;
+    if (!hostPort) return;
+
+    const command = `ssh -p ${hostPort} root@localhost`;
+
+    try {
+      await navigator.clipboard.writeText(command);
+      notifications.show({
+        title: 'SSH Command Copied',
+        message: `SSH connection command copied to clipboard`,
+        color: 'blue',
+      });
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to copy SSH command to clipboard',
         color: 'red',
       });
       console.error('Failed to copy to clipboard:', error);
@@ -279,6 +307,16 @@ export function Containers() {
                             >
                               <IconTerminal size={16} />
                             </ActionIcon>
+                            {container.ports.some(p => p.private_port === 22 || p.public_port === 22) && (
+                              <ActionIcon
+                                color="cyan"
+                                variant="light"
+                                onClick={() => handleCopySSHCommand(container.ports)}
+                                title="Copy SSH connection command"
+                              >
+                                <IconKey size={16} />
+                              </ActionIcon>
+                            )}
                             <ActionIcon
                               color="yellow"
                               variant="light"

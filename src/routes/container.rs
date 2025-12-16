@@ -39,14 +39,15 @@ pub struct RunResponse {
 pub fn container_routes() -> Router<Arc<DockerService>> {
     Router::new()
         .route("/api/containers", get(list_containers))
+        // Specific routes must come before parameterized routes
+        .route("/api/containers/build", post(build_image))
+        .route("/api/containers/run", post(run_container))
         .route(
             "/api/containers/:id",
             get(get_container).delete(remove_container),
         )
         .route("/api/containers/:id/start", post(start_container))
         .route("/api/containers/:id/stop", post(stop_container))
-        .route("/api/containers/build", post(build_image))
-        .route("/api/containers/run", post(run_container))
 }
 
 async fn list_containers(

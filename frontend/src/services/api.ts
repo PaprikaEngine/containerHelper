@@ -52,6 +52,11 @@ export const apiClient = {
           name: lang.name,
           version: lang.version,
         })),
+        ssh: config.ssh ? {
+          enabled: config.ssh.enabled,
+          port: config.ssh.port,
+          password: config.ssh.password,
+        } : undefined,
       }),
     });
 

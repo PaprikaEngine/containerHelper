@@ -226,6 +226,8 @@ impl DockerService {
         ports: Option<HashMap<String, String>>,
     ) -> Result<String> {
         let mut port_bindings = HashMap::new();
+        let mut exposed_ports = HashMap::new();
+
         if let Some(ports_map) = ports {
             for (container_port, host_port) in ports_map {
                 // Docker requires port keys to include protocol (e.g., "8080/tcp")
@@ -234,6 +236,11 @@ impl DockerService {
                 } else {
                     format!("{}/tcp", container_port)
                 };
+
+                // Add to exposed ports
+                exposed_ports.insert(port_key.clone(), HashMap::new());
+
+                // Add to port bindings
                 port_bindings.insert(
                     port_key,
                     Some(vec![bollard::service::PortBinding {
@@ -247,6 +254,11 @@ impl DockerService {
         let config = ContainerConfig {
             image: Some(image.to_string()),
             env,
+            exposed_ports: if exposed_ports.is_empty() {
+                None
+            } else {
+                Some(exposed_ports)
+            },
             host_config: Some(bollard::service::HostConfig {
                 port_bindings: Some(port_bindings),
                 ..Default::default()

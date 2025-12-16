@@ -27,12 +27,38 @@ export const generateDockerfile = (config: EnvironmentConfig): string => {
     }
   });
 
+  // Add SSH server if enabled
+  if (config.ssh?.enabled) {
+    const sshCommands = getSSHInstallCommands(config.os.type);
+    lines.push('# Install and configure SSH server');
+    lines.push(...sshCommands);
+    lines.push('');
+    lines.push(`EXPOSE ${config.ssh.port}`);
+    lines.push('');
+
+    // Add entrypoint script to set password at runtime
+    lines.push('# Create entrypoint script to set password securely');
+    lines.push("RUN echo '#!/bin/sh' > /entrypoint.sh && \\");
+    lines.push("    echo 'if [ -n \"$ROOT_PASSWORD\" ]; then' >> /entrypoint.sh && \\");
+    lines.push("    echo '  echo \"root:$ROOT_PASSWORD\" | chpasswd' >> /entrypoint.sh && \\");
+    lines.push("    echo 'fi' >> /entrypoint.sh && \\");
+    lines.push("    echo 'exec \"$@\"' >> /entrypoint.sh && \\");
+    lines.push('    chmod +x /entrypoint.sh');
+    lines.push('');
+    lines.push('ENTRYPOINT ["/entrypoint.sh"]');
+    lines.push('');
+  }
+
   // Add common helpful commands
   lines.push('# Copy application files');
   lines.push('# COPY . .');
   lines.push('');
   lines.push('# Set default command');
-  lines.push('CMD ["/bin/bash"]');
+  if (config.ssh?.enabled) {
+    lines.push('CMD ["/usr/sbin/sshd", "-D"]');
+  } else {
+    lines.push('CMD ["/bin/bash"]');
+  }
 
   return lines.join('\n');
 };
@@ -48,6 +74,30 @@ const getOSImage = (osType: string, version: string): string => {
     default:
       return 'ubuntu:22.04';
   }
+};
+
+const getSSHInstallCommands = (osType: string): string[] => {
+  const isAlpine = osType === 'alpine';
+
+  if (isAlpine) {
+    return [
+      'RUN apk update && \\',
+      '    apk add --no-cache openssh && \\',
+      '    ssh-keygen -A && \\',
+      '    sed -i "s/#PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
+      '    sed -i "s/#PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config',
+    ];
+  }
+
+  // Debian/Ubuntu
+  return [
+    'RUN apt-get update && \\',
+    '    DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server && \\',
+    '    mkdir -p /var/run/sshd && \\',
+    '    sed -i "s/#\\?PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config && \\',
+    '    sed -i "s/#\\?PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config && \\',
+    '    rm -rf /var/lib/apt/lists/*',
+  ];
 };
 
 const getLanguageInstallCommands = (
@@ -92,11 +142,20 @@ const getLanguageInstallCommands = (
       ];
 
     case 'rust':
+      if (isAlpine) {
+        return [
+          `RUN ${updateCmd} && \\`,
+          `    ${packageManager} ${installFlag} curl gcc musl-dev && \\`,
+          `    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y ${version === 'nightly' ? '--default-toolchain nightly' : ''} && \\`,
+          `    rm -rf /var/cache/apk/*`,
+          'ENV PATH="/root/.cargo/bin:${PATH}"',
+        ];
+      }
       return [
         `RUN ${updateCmd} && \\`,
         `    ${packageManager} ${installFlag} curl build-essential && \\`,
         `    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y ${version === 'nightly' ? '--default-toolchain nightly' : ''} && \\`,
-        `    rm -rf ${isAlpine ? '/var/cache/apk/*' : '/var/lib/apt/lists/*'}`,
+        `    rm -rf /var/lib/apt/lists/*`,
         'ENV PATH="/root/.cargo/bin:${PATH}"',
       ];
 
