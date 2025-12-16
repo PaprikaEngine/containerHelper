@@ -125,9 +125,9 @@ export function Containers() {
     setDeleteModalOpen(true);
   };
 
-  const handleCopyCommand = async (containerId: string, containerName: string) => {
+  const handleCopyCommand = async (containerId: string, containerImage: string) => {
     // Use /bin/sh for Alpine-based images, /bin/bash for others
-    const shell = containerName.toLowerCase().includes('alpine') ? '/bin/sh' : '/bin/bash';
+    const shell = containerImage.toLowerCase().includes('alpine') ? '/bin/sh' : '/bin/bash';
     const command = `docker exec -it ${truncateId(containerId)} ${shell}`;
 
     try {
@@ -302,7 +302,7 @@ export function Containers() {
                             <ActionIcon
                               color="blue"
                               variant="light"
-                              onClick={() => handleCopyCommand(container.id, container.name)}
+                              onClick={() => handleCopyCommand(container.id, container.image)}
                               title="Copy docker exec command"
                             >
                               <IconTerminal size={16} />
