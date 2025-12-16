@@ -59,7 +59,7 @@ pub fn generate_dockerfile(config: &EnvironmentConfig) -> String {
     lines.push("# Set default command".to_string());
 
     // Use sshd if SSH is enabled, otherwise bash
-    if config.ssh.as_ref().map_or(false, |s| s.enabled) {
+    if config.ssh.as_ref().is_some_and(|s| s.enabled) {
         lines.push("CMD [\"/usr/sbin/sshd\", \"-D\"]".to_string());
     } else {
         lines.push("CMD [\"/bin/bash\"]".to_string());
